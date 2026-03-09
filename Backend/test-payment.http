@@ -1,0 +1,80 @@
+### ===========================================
+### MIDTRANS PAYMENT GATEWAY - TEST FILE
+### ===========================================
+### Install "REST Client" extension di VSCode untuk run test ini
+### Atau copy-paste ke Postman/Thunder Client
+
+@baseURL = http://localhost:3001/api
+
+### 1. CREATE VIRTUAL ACCOUNT - BCA
+POST {{baseURL}}/payments/midtrans/create
+Content-Type: application/json
+
+{
+  "booking_id": 1,
+  "bank": "bca"
+}
+
+### 2. CREATE VIRTUAL ACCOUNT - BNI
+POST {{baseURL}}/payments/midtrans/create
+Content-Type: application/json
+
+{
+  "booking_id": 1,
+  "bank": "bni"
+}
+
+### 3. CREATE VIRTUAL ACCOUNT - MANDIRI
+POST {{baseURL}}/payments/midtrans/create
+Content-Type: application/json
+
+{
+  "booking_id": 1,
+  "bank": "mandiri"
+}
+
+### 4. CREATE VIRTUAL ACCOUNT - BRI
+POST {{baseURL}}/payments/midtrans/create
+Content-Type: application/json
+
+{
+  "booking_id": 1,
+  "bank": "bri"
+}
+
+### ===========================================
+### SIMULATE PAYMENT SUCCESS (WEBHOOK)
+### ===========================================
+### Ganti order_id dengan yang didapat dari response create VA di atas
+
+POST {{baseURL}}/payments/midtrans/notification
+Content-Type: application/json
+
+{
+  "order_id": "BOOKING-1-1234567890",
+  "transaction_status": "settlement",
+  "payment_type": "bank_transfer",
+  "transaction_id": "test-transaction-123",
+  "fraud_status": "accept",
+  "gross_amount": "500000"
+}
+
+### ===========================================
+### CHECK TRANSACTION STATUS
+### ===========================================
+### Ganti order_id dengan yang didapat dari response create VA
+
+GET {{baseURL}}/payments/midtrans/status/BOOKING-1-1234567890
+
+### ===========================================
+### NOTES:
+### ===========================================
+### 1. Pastikan backend server running (npm run dev)
+### 2. Pastikan ada data booking dengan id=1 di database
+### 3. Untuk test real payment:
+###    a. Run test #1-4 untuk dapat VA number
+###    b. Buka https://simulator.sandbox.midtrans.com/
+###    c. Pilih Bank Transfer
+###    d. Masukkan VA number
+###    e. Klik Pay
+###    f. Webhook akan otomatis dipanggil Midtrans

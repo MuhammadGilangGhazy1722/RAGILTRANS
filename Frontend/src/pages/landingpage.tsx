@@ -1,12 +1,149 @@
-import { createSignal, For, Show } from 'solid-js';
-import { A } from '@solidjs/router';
+import { createSignal, For, Show, onMount, onCleanup } from 'solid-js';
+import { A, useNavigate } from '@solidjs/router';
+import { fetchAPI, API_ENDPOINTS, SERVER_BASE_URL } from '../config/api';
 import luxioImg from '../assets/luxio.jpeg';
 import pantherImg from '../assets/phanter.jpeg';
 import innovaImg from '../assets/innova.jpeg';
+import tragaImg from '../assets/traga.jpeg';
+import l300Img from '../assets/l300.jpeg';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [showProfileDropdown, setShowProfileDropdown] = createSignal(false);
+  const [showAllCars, setShowAllCars] = createSignal(false);
+  const [allCars, setAllCars] = createSignal<any[]>([]);
+  const [loading, setLoading] = createSignal(true);
+  const [showScrollIndicator, setShowScrollIndicator] = createSignal(true);
+  
+  // Stats data dari backend
+  const [stats, setStats] = createSignal({
+    total_bookings: 0,
+    total_cars: 0,
+    total_customers: 0,
+    support_hours: '24/7',
+    satisfaction_rate: 98
+  });
+
+  const handleBooking = () => {
+    navigate('/login');
+  };
+
+  // Mapping image berdasarkan nama mobil untuk fallback
+  const getCarImage = (nama: string) => {
+    const namaLower = nama.toLowerCase();
+    if (namaLower.includes('traga')) return tragaImg;
+    if (namaLower.includes('l300')) return l300Img;
+    if (namaLower.includes('innova')) return innovaImg;
+    if (namaLower.includes('luxio')) return luxioImg;
+    // Support both spelling: Phanter and Panther
+    if (namaLower.includes('phanter') || namaLower.includes('panther')) return pantherImg;
+    return innovaImg; // default
+  };
+
+  // Format harga ke Rupiah dengan format lengkap
+  const formatRupiah = (angka: number): string => {
+    // Manual formatting untuk memastikan format yang konsisten
+    const numberString = angka.toString();
+    const split = numberString.split('.');
+    const sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    const ribuan = split[0].substr(sisa).match(/\d{3}/g);
+    
+    if (ribuan) {
+      const separator = sisa ? '.' : '';
+      rupiah += separator + ribuan.join('.');
+    }
+    
+    return rupiah + ',00';
+  };
+
+  // Track scroll position untuk show/hide scroll indicator
+  onMount(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      // Show indicator hanya jika di paling atas (scroll < 100px)
+      setShowScrollIndicator(scrollPosition < 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    onCleanup(() => {
+      window.removeEventListener('scroll', handleScroll);
+    });
+  });
+
+  // Fetch data mobil dan stats dari API
+  onMount(async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch cars dan stats secara parallel
+      const [carsResponse, statsResponse] = await Promise.all([
+        fetchAPI(API_ENDPOINTS.CARS),
+        fetchAPI('/api/analytics/landing-stats')
+      ]);
+      
+      // Process cars data
+      if (carsResponse.success) {
+        console.log('Data mobil dari API (Landing Page):', carsResponse.data);
+        
+        const mappedCars = carsResponse.data.map((car: any) => {
+          const imageUrl = car.image_url ? `${SERVER_BASE_URL}${car.image_url}` : getCarImage(car.nama_mobil);
+          console.log(`Landing - Mobil: ${car.nama_mobil}, Image URL: ${imageUrl}`);
+          
+          return {
+            name: car.nama_mobil,
+            image: imageUrl,
+            price: formatRupiah(car.harga_per_hari),
+            capacity: `${car.kapasitas_penumpang} Orang`,
+            transmission: car.jenis_transmisi,
+            category: 'MPV'
+          };
+        });
+        setAllCars(mappedCars);
+      }
+      
+      // Process stats data
+      if (statsResponse.success) {
+        console.log('Stats dari API (Landing Page):', statsResponse.data);
+        setStats(statsResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Fallback ke data hardcoded jika API gagal
+      setAllCars([
+        {
+          name: 'Daihatsu Luxio',
+          image: luxioImg,
+          price: '350.000,00',
+          capacity: '7 Orang',
+          transmission: 'Manual',
+          category: 'MPV'
+        },
+        {
+          name: 'Isuzu Panther',
+          image: pantherImg,
+          price: '300.000,00',
+          capacity: '8 Orang',
+          transmission: 'Manual',
+          category: 'MPV'
+        },
+        {
+          name: 'Toyota Innova',
+          image: innovaImg,
+          price: '450.000,00',
+          capacity: '7 Orang',
+          transmission: 'Manual',
+          category: 'MPV'
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  const displayedCars = () => showAllCars() ? allCars() : allCars().slice(0, 3);
 
   const features = [
     {
@@ -44,33 +181,6 @@ export default function LandingPage() {
       ),
       title: 'Harga Terjangkau',
       description: 'Harga kompetitif dengan kualitas layanan terbaik'
-    }
-  ];
-
-  const featuredCars = [
-    {
-      name: 'Daihatsu Luxio',
-      image: luxioImg,
-      price: '350.000',
-      capacity: '7 Orang',
-      transmission: 'Manual',
-      category: 'MPV'
-    },
-    {
-      name: 'Isuzu Panther',
-      image: pantherImg,
-      price: '300.000',
-      capacity: '8 Orang',
-      transmission: 'Manual',
-      category: 'MPV'
-    },
-    {
-      name: 'Toyota Innova',
-      image: innovaImg,
-      price: '450.000',
-      capacity: '7 Orang',
-      transmission: 'Manual',
-      category: 'MPV'
     }
   ];
 
@@ -127,9 +237,9 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection('hero')} class="text-gray-300 hover:text-purple-400 transition-colors font-medium">
                 Home
               </button>
-              <A href="/sewa" class="text-gray-300 hover:text-purple-400 transition-colors font-medium">
+              <button onClick={() => scrollToSection('cars')} class="text-gray-300 hover:text-purple-400 transition-colors font-medium">
                 Mobil
-              </A>
+              </button>
               <button onClick={() => scrollToSection('testimonials')} class="text-gray-300 hover:text-purple-400 transition-colors font-medium">
                 Testimoni
               </button>
@@ -163,9 +273,9 @@ export default function LandingPage() {
               <button onClick={() => scrollToSection('hero')} class="block w-full text-left text-gray-300 hover:text-purple-400 transition-colors py-2">
                 Home
               </button>
-              <A href="/sewa" class="block w-full text-left text-gray-300 hover:text-purple-400 transition-colors py-2">
+              <button onClick={() => scrollToSection('cars')} class="block w-full text-left text-gray-300 hover:text-purple-400 transition-colors py-2">
                 Mobil
-              </A>
+              </button>
               <button onClick={() => scrollToSection('testimonials')} class="block w-full text-left text-gray-300 hover:text-purple-400 transition-colors py-2">
                 Testimoni
               </button>
@@ -194,7 +304,7 @@ export default function LandingPage() {
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div class="animate-float">
             <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent leading-tight">
-              Ragil trans rental
+              RagilTrans rental
               <br />
               Experience
             </h1>
@@ -206,9 +316,12 @@ export default function LandingPage() {
           </p>
           
           <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <A href="/sewa" class="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-xl text-lg font-semibold glow-purple-hover shadow-xl text-center">
+            <button 
+              onClick={handleBooking}
+              class="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-xl text-lg font-semibold glow-purple-hover shadow-xl text-center transition-all"
+            >
               Sewa Sekarang
-            </A>
+            </button>
             <button onClick={() => scrollToSection('contact')} class="bg-transparent border-2 border-purple-600 hover:bg-purple-600/10 text-white px-10 py-4 rounded-xl text-lg font-semibold">
               Hubungi Kami
             </button>
@@ -217,32 +330,37 @@ export default function LandingPage() {
           {/* Stats */}
           <div class="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
             <div class="bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-sm p-6 rounded-xl border border-purple-900/30">
-              <div class="text-4xl font-bold text-purple-400 mb-2">500+</div>
+              <div class="text-4xl font-bold text-purple-400 mb-2">{stats().total_customers}+</div>
               <div class="text-gray-400 text-sm">Happy Customers</div>
             </div>
             <div class="bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-sm p-6 rounded-xl border border-purple-900/30">
-              <div class="text-4xl font-bold text-purple-400 mb-2">50+</div>
+              <div class="text-4xl font-bold text-purple-400 mb-2">{stats().total_cars}+</div>
               <div class="text-gray-400 text-sm">Premium Cars</div>
             </div>
             <div class="bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-sm p-6 rounded-xl border border-purple-900/30">
-              <div class="text-4xl font-bold text-purple-400 mb-2">24/7</div>
+              <div class="text-4xl font-bold text-purple-400 mb-2">{stats().support_hours}</div>
               <div class="text-gray-400 text-sm">Support</div>
             </div>
             <div class="bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-sm p-6 rounded-xl border border-purple-900/30">
-              <div class="text-4xl font-bold text-purple-400 mb-2">100%</div>
+              <div class="text-4xl font-bold text-purple-400 mb-2">{stats().satisfaction_rate}%</div>
               <div class="text-gray-400 text-sm">Satisfaction</div>
             </div>
           </div>
         </div>
 
         {/* Scroll Indicator */}
-        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-          <button onClick={() => scrollToSection('features')} class="animate-bounce">
-            <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
-            </svg>
-          </button>
-        </div>
+        <Show when={showScrollIndicator()}>
+          <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 animate-fade-in">
+            <button 
+              onClick={() => scrollToSection('features')} 
+              class="animate-bounce cursor-pointer hover:scale-110 transition-transform p-2 hover:bg-purple-600/20 rounded-full"
+            >
+              <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+              </svg>
+            </button>
+          </div>
+        </Show>
       </section>
 
       {/* Features Section */}
@@ -284,15 +402,37 @@ export default function LandingPage() {
             <p class="text-gray-400 text-lg">Armada premium dengan kualitas terbaik</p>
           </div>
           
+          {/* Loading State */}
+          <Show when={loading()}>
+            <div class="flex justify-center items-center py-20">
+              <div class="text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                <p class="text-gray-400">Memuat data mobil...</p>
+              </div>
+            </div>
+          </Show>
+
+          {/* Cars Grid */}
+          <Show when={!loading()}>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <For each={featuredCars}>
-              {(car: typeof featuredCars[0]) => (
+            <For each={displayedCars()}>
+              {(car: any) => (
                 <div class="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden border border-purple-900/30 card-hover group">
                   <div class="relative h-56 overflow-hidden">
                     <img 
                       src={car.image} 
                       alt={car.name} 
                       class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        console.log(`Landing - Gagal memuat gambar: ${car.image}`);
+                        const namaLower = car.name.toLowerCase();
+                        if (namaLower.includes('traga')) e.currentTarget.src = tragaImg;
+                        else if (namaLower.includes('l300')) e.currentTarget.src = l300Img;
+                        else if (namaLower.includes('innova')) e.currentTarget.src = innovaImg;
+                        else if (namaLower.includes('luxio')) e.currentTarget.src = luxioImg;
+                        else if (namaLower.includes('phanter') || namaLower.includes('panther')) e.currentTarget.src = pantherImg;
+                        else e.currentTarget.src = innovaImg;
+                      }}
                     />
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                   </div>
@@ -323,7 +463,7 @@ export default function LandingPage() {
                           <p class="text-2xl font-bold text-purple-400">Rp {car.price}</p>
                           <p class="text-gray-500 text-xs">per hari</p>
                         </div>
-                        <button class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold glow-purple-hover">
+                        <button onClick={handleBooking} class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold glow-purple-hover">
                           Booking
                         </button>
                       </div>
@@ -335,13 +475,21 @@ export default function LandingPage() {
           </div>
 
           <div class="text-center mt-12">
-            <A href="/sewa" class="bg-transparent border-2 border-purple-600 hover:bg-purple-600/10 text-white px-10 py-3 rounded-xl font-semibold inline-flex items-center gap-2 group">
-              Lihat Semua Mobil
+            <button 
+              onClick={() => setShowAllCars(!showAllCars())}
+              class="bg-transparent border-2 border-purple-600 hover:bg-purple-600/10 text-white px-10 py-3 rounded-xl font-semibold inline-flex items-center gap-2 group"
+            >
+              {showAllCars() ? 'Sembunyikan Mobil' : 'Lihat Semua Mobil'}
               <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                {showAllCars() ? (
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                ) : (
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                )}
               </svg>
-            </A>
+            </button>
           </div>
+          </Show>
         </div>
       </section>
 
@@ -446,7 +594,13 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <h3 class="text-xl font-bold text-white mb-2">Alamat</h3>
-                    <p class="text-gray-400">Jl. Premium No. 123, Jakarta Selatan</p>
+                    <a 
+                      href="https://www.google.com/maps/place/Jl.+Merdeka+No.29,+Alangamba,+Pasuruhan,+Kec.+Binangun,+Kabupaten+Cilacap,+Jawa+Tengah+53281/@-7.6704535,109.2802431,884m/data=!3m1!1e3!4m6!3m5!1s0x2e6540b2e77a5b89:0x3c3c53156ce201b9!8m2!3d-7.6707512!4d109.2816271!16s%2Fg%2F11tsjskkg5?entry=ttu&g_ep=EgoyMDI2MDMwNC4xIKXMDSoASAFQAw%3D%3D"
+                      target="_blank"
+                      class="text-gray-400 hover:text-purple-400 transition-colors"
+                    >
+                      Jl. Merdeka No.29 Binangun, Kroya
+                    </a>
                   </div>
                 </div>
               </div>
@@ -518,7 +672,7 @@ export default function LandingPage() {
           <div class="mt-12">
             <div class="bg-gradient-to-br from-gray-900 to-black p-2 rounded-2xl border border-purple-900/30 overflow-hidden">
               <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.521260322283!2d106.8195613!3d-6.1751171!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5d2e764b12d%3A0x3d2ad6e1e0e9bcc8!2sJakarta!5e0!3m2!1sen!2sid!4v1234567890"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.842!2d109.2816271!3d-7.6707512!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e6540b2e77a5b89%3A0x3c3c53156ce201b9!2sJl.%20Merdeka%20No.29%2C%20Alangamba%2C%20Pasuruhan%2C%20Kec.%20Binangun%2C%20Kabupaten%20Cilacap%2C%20Jawa%20Tengah%2053281!5e0!3m2!1sid!2sid!4v1234567890"
                 width="100%" 
                 height="400" 
                 style="border:0; border-radius: 12px;" 
@@ -543,7 +697,10 @@ export default function LandingPage() {
             <br class="hidden sm:block" />
             Booking sekarang dan nikmati perjalanan yang tak terlupakan!
           </p>
-          <button onClick={() => scrollToSection('cars')} class="bg-purple-600 hover:bg-purple-700 text-white px-12 py-4 rounded-xl text-lg font-semibold glow-purple-hover inline-flex items-center gap-3 shadow-2xl">
+          <button 
+            onClick={handleBooking}
+            class="bg-purple-600 hover:bg-purple-700 text-white px-12 py-4 rounded-xl text-lg font-semibold glow-purple-hover inline-flex items-center gap-3 shadow-2xl transition-all"
+          >
             Mulai Sekarang
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>

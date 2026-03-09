@@ -1,6 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
 import { API_ENDPOINTS, fetchAPI } from '../config/api';
+import { showToast } from '../components/ToastContainer';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -94,17 +95,19 @@ export default function Register() {
           username: formData().username,
           email: formData().email,
           password: formData().password,
+          confirm_password: formData().confirmPassword,
           no_hp: formData().no_hp.replace(/\s/g, ''), // Remove spaces
+          agree_terms: acceptTerms()
         }),
       });
 
       console.log('✅ Registrasi berhasil:', response);
       
       // Tampilkan success message
-      alert('✅ Registrasi berhasil!\n\nSilakan login dengan akun Anda.');
+      showToast('Registrasi berhasil!\n\nSilakan login dengan akun Anda.', 'success', 4000);
       
       // Redirect ke login
-      navigate('/login');
+      setTimeout(() => navigate('/login'), 1000);
     } catch (err: any) {
       console.error('❌ Registrasi gagal:', err);
       
@@ -135,14 +138,14 @@ export default function Register() {
         {/* Logo & Header */}
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl mb-4 glow-purple">
-            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <text x="12" y="17" text-anchor="middle" font-size="18" font-weight="bold" fill="currentColor">R</text>
             </svg>
           </div>
           <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent mb-2">
             Daftar Akun
           </h1>
-          <p class="text-gray-400">Buat akun LuxeDrive untuk mulai menyewa</p>
+          <p class="text-gray-400">Buat akun RagilTrans untuk mulai menyewa</p>
         </div>
 
         {/* Register Card */}
@@ -185,6 +188,8 @@ export default function Register() {
                   value={formData().nama}
                   onInput={(e) => setFormData({ ...formData(), nama: e.currentTarget.value })}
                   placeholder="Contoh: John Doe"
+                  pattern="^[a-zA-Z\s]+$"
+                  title="Nama hanya boleh berisi huruf dan spasi"
                   class="w-full pl-12"
                   classList={{ 'border-red-500': !!errors().nama }}
                 />
