@@ -833,8 +833,8 @@ export default function Sewa() {
                       <span>{car.transmission}</span>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-gray-400">
-                      <svg class="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="currentColor">
-                        <text x="12" y="17" text-anchor="middle" font-size="14" font-weight="bold" fill="currentColor">R</text>
+                      <svg class="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 2a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H6zm0 2h7v16H6V4zm10 3a1 1 0 0 1 1 1v7a1 1 0 0 1-2 0V8h-1V7h2zm-1 10a1 1 0 1 1 2 0v2a1 1 0 1 1-2 0v-2z" />
                       </svg>
                       <span>{car.fuel}</span>
                     </div>
