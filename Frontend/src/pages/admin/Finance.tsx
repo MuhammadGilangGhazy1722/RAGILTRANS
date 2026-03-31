@@ -1,3 +1,5 @@
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { createSignal, onMount, Show, For } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
 import { fetchAPI } from '../../config/api';
@@ -144,6 +146,121 @@ export default function Finance() {
     fetchYearlyComparison();
   };
 
+const printPDF = () => {
+  const report = monthlyReport();
+  const yearly = yearlyData();
+  if (!report) return;
+
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  let y = 20;
+
+  // Header
+  pdf.setFillColor(88, 28, 135);
+  pdf.rect(0, 0, pageWidth, 14, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RAGILTRANS - Laporan Keuangan', pageWidth / 2, 10, { align: 'center' });
+
+  // Periode
+  pdf.setTextColor(180, 180, 180);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Periode: ${report.period.month_name} ${report.period.year}`, pageWidth / 2, y, { align: 'center' });
+  y += 10;
+
+  // Summary
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFillColor(30, 30, 30);
+  pdf.rect(10, y, pageWidth - 20, 8, 'F');
+  pdf.text('Ringkasan Keuangan', 14, y + 5.5);
+  y += 12;
+
+  const summaryData = [
+    ['Total Booking', `${report.summary.total_bookings} booking`],
+    ['Total Pendapatan', formatCurrency(report.summary.total_revenue || 0)],
+    ['Sudah Dibayar', formatCurrency(report.summary.paid_revenue || 0)],
+    ['Belum Dibayar', formatCurrency(report.summary.pending_revenue || 0)],
+  ];
+
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  summaryData.forEach(([label, value]) => {
+    pdf.setTextColor(150, 150, 150);
+    pdf.text(label, 14, y);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(value, pageWidth - 14, y, { align: 'right' });
+    pdf.setDrawColor(50, 50, 50);
+    pdf.line(14, y + 2, pageWidth - 14, y + 2);
+    y += 10;
+  });
+
+  y += 5;
+
+  // Top Cars
+  if (report.top_cars.length > 0) {
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFillColor(30, 30, 30);
+    pdf.rect(10, y, pageWidth - 20, 8, 'F');
+    pdf.text('Mobil Terlaris Bulan Ini', 14, y + 5.5);
+    y += 12;
+
+    report.top_cars.forEach((car, i) => {
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(200, 150, 255);
+      pdf.text(`#${i + 1} ${car.nama_mobil} (${car.plat_nomor})`, 14, y);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`${car.total_bookings}x disewa — ${formatCurrency(car.total_revenue)}`, pageWidth - 14, y, { align: 'right' });
+      pdf.setDrawColor(50, 50, 50);
+      pdf.line(14, y + 2, pageWidth - 14, y + 2);
+      y += 10;
+    });
+
+    y += 5;
+  }
+
+  // Yearly Comparison
+  if (yearly) {
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFillColor(30, 30, 30);
+    pdf.rect(10, y, pageWidth - 20, 8, 'F');
+    pdf.text(`Perbandingan Bulanan ${yearly.year}`, 14, y + 5.5);
+    y += 12;
+
+    yearly.monthly_comparison.forEach((month) => {
+      if (y > 270) {
+        pdf.addPage();
+        y = 20;
+      }
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(200, 200, 200);
+      pdf.text(month.month_name, 14, y);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`${formatCurrency(month.paid_revenue)} (${month.total_bookings} booking)`, pageWidth - 14, y, { align: 'right' });
+      pdf.setDrawColor(50, 50, 50);
+      pdf.line(14, y + 2, pageWidth - 14, y + 2);
+      y += 9;
+    });
+  }
+
+  // Footer
+  pdf.setFontSize(8);
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, pageWidth / 2, 290, { align: 'center' });
+
+  pdf.save(`Laporan-Keuangan-${selectedYear()}-${selectedMonth()}.pdf`);
+};
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
   const months = [
@@ -186,20 +303,31 @@ export default function Finance() {
       {/* Content */}
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
-        <div class="mb-8 flex items-center justify-between">
+<div class="mb-8 flex items-center justify-between">
           <div>
             <h1 class="text-4xl font-bold text-white mb-2">Kelola Keuangan</h1>
             <p class="text-gray-400">Laporan keuangan dan performa rental mobil</p>
           </div>
-          <A 
-            href="/admin/dashboard" 
-            class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Kembali
-          </A>
+          <div class="flex items-center gap-3">
+            <button
+              onClick={printPDF}
+              class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-semibold"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+              </svg>
+              Cetak PDF
+            </button>
+            <A
+              href="/admin/dashboard"
+              class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+              </svg>
+              Kembali
+            </A>
+          </div>
         </div>
 
         {/* Filter */}
@@ -231,10 +359,12 @@ export default function Finance() {
             </div>
           </div>
         </div>
-
+          
+      <div id="finance-report">
         <Show when={!loading()} fallback={
           <div class="text-center py-20">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto">
+            </div>
             <p class="text-gray-400 mt-4">Memuat data keuangan...</p>
           </div>
         }>
@@ -405,5 +535,6 @@ export default function Finance() {
         </Show>
       </div>
     </div>
+  </div>
   );
 }

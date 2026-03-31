@@ -11,7 +11,6 @@ export default function OAuthCallback() {
     const error = Array.isArray(searchParams.error) ? searchParams.error[0] : searchParams.error;
 
     if (error) {
-      // Handle OAuth error
       console.error('OAuth Error:', error);
       alert('Login gagal. Silakan coba lagi.');
       navigate('/login');
@@ -21,28 +20,30 @@ export default function OAuthCallback() {
     if (token && userStr) {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
-        
-        // Store token and user data in localStorage
-        localStorage.setItem('token', token);
+
+        console.log('OAuth token:', token);
+        console.log('OAuth user:', user);
+
+        localStorage.setItem('authToken', token);
         localStorage.setItem('userId', user.id.toString());
         localStorage.setItem('username', user.username);
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('userName', user.nama);
-        
+
         if (user.profile_picture) {
           localStorage.setItem('userProfilePicture', user.profile_picture);
         }
 
-        // Redirect to home page
         navigate('/user/home');
-        
+
       } catch (error) {
         console.error('Token parsing error:', error);
         alert('Terjadi kesalahan saat login. Silakan coba lagi.');
         navigate('/login');
       }
     } else {
-      // No token or user data
+      console.log('Token:', token);
+      console.log('UserStr:', userStr);
       alert('Login gagal. Data tidak lengkap.');
       navigate('/login');
     }

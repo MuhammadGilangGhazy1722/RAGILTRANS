@@ -1,6 +1,13 @@
+require('dotenv').config();
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const db = require('./db');
+const { createClient } = require('@supabase/supabase-js');
+
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
@@ -10,8 +17,12 @@ passport.serializeUser((user, done) => {
 // Deserialize user from session
 passport.deserializeUser(async (id, done) => {
   try {
-    const [users] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
-    done(null, users[0]);
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+    done(error, data);
   } catch (error) {
     done(error, null);
   }
@@ -27,47 +38,56 @@ passport.use(new GoogleStrategy({
   async (req, accessToken, refreshToken, profile, done) => {
     try {
       // Check if user already exists with this Google ID
-      const [existingUsers] = await db.query(
-        'SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?',
-        ['google', profile.id]
-      );
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('oauth_provider', 'google')
+        .eq('oauth_id', profile.id)
+        .single();
 
-      if (existingUsers.length > 0) {
-        // User exists, return user
-        return done(null, existingUsers[0]);
+      if (existingUser) {
+        return done(null, existingUser);
       }
 
       // Check if email already exists
-      const [emailUsers] = await db.query(
-        'SELECT * FROM users WHERE email = ?',
-        [profile.emails[0].value]
-      );
+      const { data: emailUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', profile.emails[0].value)
+        .single();
 
-      if (emailUsers.length > 0) {
-        // Email exists with different provider, link accounts
-        const userId = emailUsers[0].id;
-        await db.query(
-          'UPDATE users SET oauth_provider = ?, oauth_id = ?, profile_picture = ? WHERE id = ?',
-          ['google', profile.id, profile.photos[0]?.value, userId]
-        );
-        
-        const [updatedUser] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
-        return done(null, updatedUser[0]);
+      if (emailUser) {
+        const { data: updatedUser } = await supabase
+          .from('users')
+          .update({
+            oauth_provider: 'google',
+            oauth_id: profile.id,
+            profile_picture: profile.photos[0]?.value
+          })
+          .eq('id', emailUser.id)
+          .select()
+          .single();
+        return done(null, updatedUser);
       }
 
       // Create new user
       const username = profile.emails[0].value.split('@')[0] + Math.floor(Math.random() * 1000);
-      const nama = profile.displayName || profile.emails[0].value.split('@')[0];
-      const email = profile.emails[0].value;
-      
-      const [result] = await db.query(
-        `INSERT INTO users (nama, username, email, password, no_hp, oauth_provider, oauth_id, profile_picture) 
-         VALUES (?, ?, ?, NULL, '', ?, ?, ?)`,
-        [nama, username, email, 'google', profile.id, profile.photos[0]?.value]
-      );
+      const { data: newUser } = await supabase
+        .from('users')
+        .insert({
+          nama: profile.displayName || profile.emails[0].value.split('@')[0],
+          username,
+          email: profile.emails[0].value,
+          password: null,
+          no_hp: '',
+          oauth_provider: 'google',
+          oauth_id: profile.id,
+          profile_picture: profile.photos[0]?.value
+        })
+        .select()
+        .single();
 
-      const [newUser] = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
-      return done(null, newUser[0]);
+      return done(null, newUser);
 
     } catch (error) {
       return done(error, null);
