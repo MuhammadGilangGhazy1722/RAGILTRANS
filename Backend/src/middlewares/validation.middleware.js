@@ -4,9 +4,9 @@ const Joi = require('joi');
 const schemas = {
   // Auth Schemas
   register: Joi.object({
-    nama: Joi.string().alpha().required().messages({
+      nama: Joi.string().pattern(/^[a-zA-Z\s]+$/).required().messages({
       'string.empty': 'Nama harus diisi',
-      'string.alpha': 'Nama hanya boleh berisi huruf',
+      'string.pattern.base': 'Nama hanya boleh berisi huruf',
       'any.required': 'Nama wajib diisi'
     }),
     username: Joi.string().alphanum().min(3).max(30).required().messages({
@@ -14,7 +14,7 @@ const schemas = {
       'string.alphanum': 'Username hanya boleh berisi huruf dan angka',
       'string.min': 'Username minimal 3 karakter',
       'string.max': 'Username maksimal 30 karakter',
-      'any.required': 'Username wajib diisi'
+      'any.required': 'Username wajib diisi'  
     }),
     email: Joi.string().email().required().messages({
       'string.empty': 'Email harus diisi',
