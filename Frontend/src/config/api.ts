@@ -1,9 +1,9 @@
 // Konfigurasi API Backend
 // Menggunakan localhost untuk development
-// Vite proxy akan forward request /api ke http://localhost:3001
+// Vite proxy akan forward request /api ke http://localhost:3000
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || (
-  import.meta.env.DEV ? '' : 'http://localhost:3001'
+  import.meta.env.DEV ? '' : 'http://localhost:3000'
 );
 
 // Server Base URL untuk static files (images, uploads)
@@ -59,6 +59,12 @@ export const API_ENDPOINTS = {
   // Upload
   UPLOAD_IMAGE: `${API_BASE_URL}/api/upload`,
   DELETE_IMAGE: (filename: string) => `${API_BASE_URL}/api/upload/${filename}`,
+  
+  // Reviews & Testimonials
+  REVIEWS_PUBLIC: `${API_BASE_URL}/api/reviews/public`,
+  SUBMIT_REVIEW: `${API_BASE_URL}/api/reviews/submit`,
+  MY_REVIEWS: `${API_BASE_URL}/api/reviews/my-reviews`,
+  BOOKING_REVIEW_STATUS: (bookingId: number) => `${API_BASE_URL}/api/reviews/booking/${bookingId}/status`,
   
   // Analytics & Reports (Admin)
   ANALYTICS_MONTHLY: `${API_BASE_URL}/api/analytics/monthly-report`,

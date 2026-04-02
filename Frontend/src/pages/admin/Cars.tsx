@@ -180,7 +180,7 @@ export default function AdminCars() {
       setUploading(true);
 
       // Cek token dulu
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('adminToken');
       console.log('Admin upload - Token ada?', !!token);
       
       if (!token) {

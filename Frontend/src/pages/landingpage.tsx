@@ -14,6 +14,7 @@ export default function LandingPage() {
   const [showAllCars, setShowAllCars] = createSignal(false);
   const [allCars, setAllCars] = createSignal<any[]>([]);
   const [loading, setLoading] = createSignal(true);
+  const [testimonials, setTestimonials] = createSignal<any[]>([]);
   const [showScrollIndicator, setShowScrollIndicator] = createSignal(true);
   
   // Stats data dari backend
@@ -73,15 +74,16 @@ export default function LandingPage() {
     });
   });
 
-  // Fetch data mobil dan stats dari API
+  // Fetch data mobil, reviews, dan stats dari API
   onMount(async () => {
     try {
       setLoading(true);
       
-      // Fetch cars dan stats secara parallel
-      const [carsResponse, statsResponse] = await Promise.all([
+      // Fetch cars, reviews, dan stats secara parallel
+      const [carsResponse, statsResponse, reviewsResponse] = await Promise.all([
         fetchAPI(API_ENDPOINTS.CARS),
-        fetchAPI('/api/analytics/landing-stats')
+        fetchAPI('/api/analytics/landing-stats'),
+        fetchAPI(API_ENDPOINTS.REVIEWS_PUBLIC).catch(() => ({ success: false, data: [] }))
       ]);
       
       // Process cars data
@@ -108,6 +110,44 @@ export default function LandingPage() {
       if (statsResponse.success) {
         console.log('Stats dari API (Landing Page):', statsResponse.data);
         setStats(statsResponse.data);
+      }
+
+      // Process reviews data
+      if (reviewsResponse.success && reviewsResponse.data && reviewsResponse.data.length > 0) {
+        console.log('Reviews dari API:', reviewsResponse.data);
+        const mappedReviews = reviewsResponse.data.map((review: any) => ({
+          name: review.display_name || review.customer_name || 'Pelanggan Kami',
+          role: 'Pelanggan',
+          comment: review.review_text,
+          rating: review.rating,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(review.display_name || 'P')}&background=7C3AED&color=fff`
+        }));
+        setTestimonials(mappedReviews);
+      } else {
+        // Fallback testimonials jika tidak ada reviews
+        setTestimonials([
+          {
+            name: 'Budi Santoso',
+            role: 'Pelanggan',
+            comment: 'Pelayanan sangat memuaskan! Mobil bersih dan terawat. Proses booking mudah dan cepat.',
+            rating: 5,
+            avatar: 'https://ui-avatars.com/api/?name=Budi+Santoso&background=7C3AED&color=fff'
+          },
+          {
+            name: 'Siti Rahma',
+            role: 'Pelanggan',
+            comment: 'Pengalaman sewa mobil terbaik yang pernah saya alami. Harga reasonable dengan kualitas premium.',
+            rating: 5,
+            avatar: 'https://ui-avatars.com/api/?name=Siti+Rahma&background=7C3AED&color=fff'
+          },
+          {
+            name: 'Andi Wijaya',
+            role: 'Pelanggan',
+            comment: 'Customer service responsif dan profesional. Mobil sesuai dengan deskripsi. Highly recommended!',
+            rating: 5,
+            avatar: 'https://ui-avatars.com/api/?name=Andi+Wijaya&background=7C3AED&color=fff'
+          }
+        ]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -181,30 +221,6 @@ export default function LandingPage() {
       ),
       title: 'Harga Terjangkau',
       description: 'Harga kompetitif dengan kualitas layanan terbaik'
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: 'Budi Santoso',
-      role: 'Business Owner',
-      comment: 'Pelayanan sangat memuaskan! Mobil bersih dan terawat. Proses booking mudah dan cepat.',
-      rating: 5,
-      avatar: 'https://ui-avatars.com/api/?name=Budi+Santoso&background=7C3AED&color=fff'
-    },
-    {
-      name: 'Siti Rahma',
-      role: 'Travel Enthusiast',
-      comment: 'Pengalaman sewa mobil terbaik yang pernah saya alami. Harga reasonable dengan kualitas premium.',
-      rating: 5,
-      avatar: 'https://ui-avatars.com/api/?name=Siti+Rahma&background=7C3AED&color=fff'
-    },
-    {
-      name: 'Andi Wijaya',
-      role: 'Entrepreneur',
-      comment: 'Customer service responsif dan profesional. Mobil sesuai dengan deskripsi. Highly recommended!',
-      rating: 5,
-      avatar: 'https://ui-avatars.com/api/?name=Andi+Wijaya&background=7C3AED&color=fff'
     }
   ];
 
@@ -476,10 +492,10 @@ export default function LandingPage() {
 
           <div class="text-center mt-12">
             <button 
-              onClick={() => setShowAllCars(!showAllCars())}
+              onClick={() => navigate('/login')}
               class="bg-transparent border-2 border-purple-600 hover:bg-purple-600/10 text-white px-10 py-3 rounded-xl font-semibold inline-flex items-center gap-2 group"
             >
-              {showAllCars() ? 'Sembunyikan Mobil' : 'Lihat Semua Mobil'}
+              Lihat Semua Mobil
               <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {showAllCars() ? (
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
@@ -503,39 +519,48 @@ export default function LandingPage() {
             <p class="text-gray-400 text-lg">Testimoni dari pelanggan kami</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <For each={testimonials}>
-              {(testimonial: typeof testimonials[0]) => (
-                <div class="bg-gradient-to-br from-gray-900 to-black p-8 rounded-2xl border border-purple-900/30 card-hover">
-                  {/* Stars */}
-                  <div class="flex gap-1 mb-4">
-                    <For each={Array(testimonial.rating)}>
-                      {() => (
-                        <svg class="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                        </svg>
-                      )}
-                    </For>
-                  </div>
+          <div class="overflow-x-auto pb-4 -mx-4 px-4">
+            <div class="flex gap-6 min-w-max">
+              <For each={testimonials()}>
+                {(testimonial: any) => (
+                  <div class="flex-shrink-0 w-96 bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl border border-purple-900/30 card-hover flex flex-col h-full">
+                    {/* Header: Avatar + Name + Stars */}
+                    <div class="flex items-start gap-3 mb-1">
+                      <div class="flex items-start gap-3 flex-shrink-0">
+                        <img 
+                          src={testimonial.avatar} 
+                          alt={testimonial.name}
+                          class="w-10 h-10 rounded-full border-2 border-purple-600 flex-shrink-0"
+                        />
+                        <div>
+                          <div class="font-semibold text-white text-sm">{testimonial.name}</div>
+                          <div class="text-xs text-gray-400">{testimonial.role}</div>
+                        </div>
+                      </div>
 
-                  <p class="text-gray-300 mb-6 leading-relaxed italic">
-                    "{testimonial.comment}"
-                  </p>
-
-                  <div class="flex items-center gap-4">
-                    <img 
-                      src={testimonial.avatar} 
-                      alt={testimonial.name}
-                      class="w-12 h-12 rounded-full border-2 border-purple-600"
-                    />
-                    <div>
-                      <div class="font-semibold text-white">{testimonial.name}</div>
-                      <div class="text-sm text-gray-400">{testimonial.role}</div>
+                      {/* Stars */}
+                      <div class="flex gap-1 flex-shrink-0 ml-auto">
+                        <For each={Array(testimonial.rating)}>
+                          {() => (
+                            <svg class="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                          )}
+                        </For>
+                      </div>
                     </div>
+
+                    {/* Divider */}
+                    <div class="border-t border-gray-700/50 my-4"></div>
+
+                    {/* Review Text */}
+                    <p class="text-gray-300 leading-relaxed italic flex-grow text-sm">
+                      "{testimonial.comment}"
+                    </p>
                   </div>
-                </div>
-              )}
-            </For>
+                )}
+              </For>
+            </div>
           </div>
         </div>
       </section>

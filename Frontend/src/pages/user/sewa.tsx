@@ -3,6 +3,7 @@ import { A } from '@solidjs/router';
 import { fetchAPI, API_ENDPOINTS } from '../../config/api';
 import { showToast } from '../../components/ToastContainer';
 import { showConfirm } from '../../components/ConfirmDialogContainer';
+import ReviewModal from '../../components/ReviewModal';
 import tragaImg from '../../assets/traga.jpeg';
 import l300Img from '../../assets/l300.jpeg';
 import innovaImg from '../../assets/innova.jpeg';
@@ -307,6 +308,8 @@ export default function Sewa() {
 
   const [showBookingReceipt, setShowBookingReceipt] = createSignal(false);
   const [bookingReceipt, setBookingReceipt] = createSignal<any>(null);
+  const [showReviewModal, setShowReviewModal] = createSignal(false);
+  const [bookingIdForReview, setBookingIdForReview] = createSignal<number | null>(null);
 
   // Check real-time availability when dates change
   const checkRealTimeAvailability = async () => {
@@ -1885,6 +1888,19 @@ export default function Sewa() {
               <div class="flex gap-2">
                 <button
                   type="button"
+                  onClick={() => {
+                    setBookingIdForReview(bookingReceipt().bookingId);
+                    setShowReviewModal(true);
+                  }}
+                  class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-1"
+                >
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                  Berikan Review
+                </button>
+                <button
+                  type="button"
                   onClick={() => window.print()}
                   class="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-1"
                 >
@@ -1913,6 +1929,18 @@ export default function Sewa() {
           </div>
         </div>
       </Show>
+
+      {/* Review Modal */}
+      <ReviewModal 
+        isOpen={showReviewModal()}
+        bookingId={bookingIdForReview() || 0}
+        onClose={() => setShowReviewModal(false)}
+        onSuccess={() => {
+          setShowBookingReceipt(false);
+          setBookingReceipt(null);
+          setShowReviewModal(false);
+        }}
+      />
       </div>
     </div>
   );

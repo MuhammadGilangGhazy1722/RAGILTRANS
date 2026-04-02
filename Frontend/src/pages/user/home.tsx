@@ -1,15 +1,55 @@
-import { createSignal, For, onMount } from 'solid-js';
+import { createSignal, For, Show, onMount } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
 import UserProfileDropdown from '../../components/UserProfileDropdown';
-import { fetchAPI, API_ENDPOINTS } from '../../config/api';
+import { fetchAPI, API_ENDPOINTS, SERVER_BASE_URL } from '../../config/api';
 import luxioImg from '../../assets/luxio.jpeg';
 import pantherImg from '../../assets/phanter.jpeg';
 import innovaImg from '../../assets/innova.jpeg';
+import tragaImg from '../../assets/traga.jpeg';
+import l300Img from '../../assets/l300.jpeg';
+
+interface Car {
+  id: number;
+  nama_mobil: string;
+  plat_nomor: string;
+  kapasitas_penumpang: number;
+  jenis_transmisi: string;
+  jenis_bahan_bakar?: string;
+  harga_per_hari: number;
+  stok: number;
+  status: string;
+  image_url?: string;
+}
 
 export default function Home() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
   const [userName, setUserName] = createSignal('');
+  const [cars, setCars] = createSignal<Car[]>([]);
+  const [loading, setLoading] = createSignal(true);
+
+  const formatRupiah = (angka: number): string => {
+    const numberString = angka.toString();
+    const split = numberString.split('.');
+    const sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    const ribuan = split[0].substr(sisa).match(/\d{3}/g);
+    if (ribuan) {
+      const separator = sisa ? '.' : '';
+      rupiah += separator + ribuan.join('.');
+    }
+    return rupiah + ',00';
+  };
+
+  const getCarImage = (nama: string) => {
+    const namaLower = nama.toLowerCase();
+    if (namaLower.includes('traga')) return tragaImg;
+    if (namaLower.includes('l300')) return l300Img;
+    if (namaLower.includes('innova')) return innovaImg;
+    if (namaLower.includes('luxio')) return luxioImg;
+    if (namaLower.includes('phanter') || namaLower.includes('panther')) return pantherImg;
+    return innovaImg;
+  };
 
   onMount(async () => {
     // Check if user is logged in
@@ -35,12 +75,33 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
-      // Keep using localStorage username if fetch fails
       if (!storedName) {
         setUserName('User');
       }
     }
+
+    // Fetch cars from database
+    try {
+      setLoading(true);
+      const response = await fetchAPI(API_ENDPOINTS.CARS);
+      if (response.success && response.data) {
+        // Take first 3 cars as featured
+        setCars(response.data.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Failed to fetch cars:', error);
+    } finally {
+      setLoading(false);
+    }
   });
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+    setIsMenuOpen(false);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -49,44 +110,6 @@ export default function Home() {
     localStorage.removeItem('userName');
     localStorage.removeItem('userId');
     navigate('/');
-  };
-
-  const featuredCars = [
-    {
-      id: 1,
-      name: 'Daihatsu Luxio',
-      image: luxioImg,
-      price: '350.000,00',
-      capacity: '7 Orang',
-      transmission: 'Manual',
-      category: 'MPV'
-    },
-    {
-      id: 2,
-      name: 'Isuzu Panther',
-      image: pantherImg,
-      price: '300.000,00',
-      capacity: '8 Orang',
-      transmission: 'Manual',
-      category: 'MPV'
-    },
-    {
-      id: 3,
-      name: 'Toyota Innova',
-      image: innovaImg,
-      price: '450.000,00',
-      capacity: '7 Orang',
-      transmission: 'Manual',
-      category: 'MPV'
-    }
-  ];
-
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-    setIsMenuOpen(false);
   };
 
   return (
@@ -185,53 +208,65 @@ export default function Home() {
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <For each={featuredCars}>
-              {(car) => (
-                <div class="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden border border-purple-900/30 card-hover group">
-                  <div class="relative h-56 overflow-hidden">
-                    <img 
-                      src={car.image} 
-                      alt={car.name} 
-                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                  </div>
-                  
-                  <div class="p-6">
-                    <h3 class="text-xl sm:text-2xl font-bold text-white mb-4 break-words">{car.name}</h3>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-6 text-sm">
-                      <div class="flex items-center gap-2 text-gray-400">
-                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                        <span>{car.capacity}</span>
-                      </div>
-                      <div class="flex items-center gap-2 text-gray-400">
-                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <span>{car.transmission}</span>
-                      </div>
-                    </div>
-
-                    <div class="border-t border-gray-800 pt-4">
-                      <div class="flex items-center justify-between gap-3">
-                        <div class="flex-1 min-w-0">
-                          <p class="text-gray-500 text-xs mb-1">Mulai dari</p>
-                          <p class="text-xl sm:text-2xl font-bold text-purple-400 break-words">Rp {car.price}</p>
-                          <p class="text-gray-500 text-xs">per hari</p>
-                        </div>
-                        <A href="/sewa" class="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base glow-purple-hover whitespace-nowrap">
-                          Booking
-                        </A>
-                      </div>
-                    </div>
-                  </div>
+            <Show when={!loading()} fallback={
+              <div class="col-span-full flex justify-center items-center py-20">
+                <div class="text-center">
+                  <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                  <p class="text-gray-400">Memuat data mobil...</p>
                 </div>
-              )}
-            </For>
+              </div>
+            }>
+              <For each={cars()}>
+                {(car) => (
+                  <div class="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden border border-purple-900/30 card-hover group">
+                    <div class="relative h-56 overflow-hidden">
+                      <img 
+                        src={car.image_url || getCarImage(car.nama_mobil)} 
+                        alt={car.nama_mobil} 
+                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        onError={(e) => {
+                          e.currentTarget.src = getCarImage(car.nama_mobil);
+                        }}
+                      />
+                      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                    </div>
+                    
+                    <div class="p-6">
+                      <h3 class="text-xl sm:text-2xl font-bold text-white mb-4 break-words">{car.nama_mobil}</h3>
+                      
+                      <div class="grid grid-cols-2 gap-3 mb-6 text-sm">
+                        <div class="flex items-center gap-2 text-gray-400">
+                          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                          </svg>
+                          <span>{car.kapasitas_penumpang} Orang</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-400">
+                          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          </svg>
+                          <span>{car.jenis_transmisi}</span>
+                        </div>
+                      </div>
+
+                      <div class="border-t border-gray-800 pt-4">
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="flex-1 min-w-0">
+                            <p class="text-gray-500 text-xs mb-1">Mulai dari</p>
+                            <p class="text-xl sm:text-2xl font-bold text-purple-400 break-words">Rp {formatRupiah(car.harga_per_hari)}</p>
+                            <p class="text-gray-500 text-xs">per hari</p>
+                          </div>
+                          <A href="/sewa" class="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base glow-purple-hover whitespace-nowrap">
+                            Booking
+                          </A>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </For>
+            </Show>
           </div>
 
           <div class="text-center mt-12 px-4">

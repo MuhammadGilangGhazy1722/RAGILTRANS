@@ -46,39 +46,22 @@ passport.use(new GoogleStrategy({
         .single();
 
       if (existingUser) {
+        // User sudah login dengan Google ID ini sebelumnya
         return done(null, existingUser);
       }
 
-      // Check if email already exists
-      const { data: emailUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', profile.emails[0].value)
-        .single();
-
-      if (emailUser) {
-        const { data: updatedUser } = await supabase
-          .from('users')
-          .update({
-            oauth_provider: 'google',
-            oauth_id: profile.id,
-            profile_picture: profile.photos[0]?.value
-          })
-          .eq('id', emailUser.id)
-          .select()
-          .single();
-        return done(null, updatedUser);
-      }
-
-      // Create new user
-      const username = profile.emails[0].value.split('@')[0] + Math.floor(Math.random() * 1000);
+      // Create new user dengan unique email dari Google
+      // Jangan merge dengan user lokal yang sudah exist
+      const email = profile.emails[0].value;
+      const username = email.split('@')[0] + Math.floor(Math.random() * 10000);
+      
       const { data: newUser } = await supabase
         .from('users')
         .insert({
-          nama: profile.displayName || profile.emails[0].value.split('@')[0],
-          username,
-          email: profile.emails[0].value,
-          password: null,
+          nama: profile.displayName || email.split('@')[0],
+          username: username,
+          email: email,
+          password: null,  // Google auth tidak butuh password
           no_hp: '',
           oauth_provider: 'google',
           oauth_id: profile.id,

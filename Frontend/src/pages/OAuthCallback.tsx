@@ -24,6 +24,15 @@ export default function OAuthCallback() {
         console.log('OAuth token:', token);
         console.log('OAuth user:', user);
 
+        // Clear old localStorage data first
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userProfilePicture');
+
+        // Set new OAuth data
         localStorage.setItem('authToken', token);
         localStorage.setItem('userId', user.id.toString());
         localStorage.setItem('username', user.username);
@@ -34,7 +43,7 @@ export default function OAuthCallback() {
           localStorage.setItem('userProfilePicture', user.profile_picture);
         }
 
-        navigate('/user/home');
+        navigate('/home');
 
       } catch (error) {
         console.error('Token parsing error:', error);

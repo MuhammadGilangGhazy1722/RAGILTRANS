@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "cd Frontend && npm run build",
+  "outputDirectory": "Frontend/dist",
+  "framework": "vite",
+  "env": {
+    "VITE_API_URL": {
+      "description": "API Backend URL",
+      "required": true
+    }
+  },
+  "redirects": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://api.example.com/:path*"
+    }
+  ]
+}
