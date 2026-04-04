@@ -80,11 +80,11 @@ export default function LandingPage() {
       setLoading(true);
       
       // Fetch cars, reviews, dan stats secara parallel
-      const [carsResponse, statsResponse, reviewsResponse] = await Promise.all([
+      const [carsResponse, reviewsResponse] = await Promise.all([
       fetchAPI(API_ENDPOINTS.CARS),
-      fetchAPI('/api/analytics/landing-stats').catch(() => ({ success: false, data: {} })),
       fetchAPI(API_ENDPOINTS.REVIEWS_PUBLIC).catch(() => ({ success: false, data: [] }))
       ]);
+      const statsResponse = { success: false, data: {} };
       
       // Process cars data
       if (carsResponse.success) {
@@ -107,11 +107,6 @@ export default function LandingPage() {
         setAllCars(mappedCars);
       }
       
-      // Process stats data
-      if (statsResponse.success) {
-        console.log('Stats dari API (Landing Page):', statsResponse.data);
-        setStats(statsResponse.data);
-      }
 
       // Process reviews data
       if (reviewsResponse.success && reviewsResponse.data && reviewsResponse.data.length > 0) {
