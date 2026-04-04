@@ -91,8 +91,9 @@ export default function LandingPage() {
         console.log('Data mobil dari API (Landing Page):', carsResponse.data);
         
         const mappedCars = carsResponse.data.map((car: any) => {
-          const imageUrl = car.image_url ? `${SERVER_BASE_URL}${car.image_url}` : getCarImage(car.nama_mobil);
-          console.log(`Landing - Mobil: ${car.nama_mobil}, Image URL: ${imageUrl}`);
+          const imageUrl = car.image_url 
+          ? (car.image_url.startsWith('http') ? car.image_url : `${SERVER_BASE_URL}${car.image_url}`)
+          : getCarImage(car.nama_mobil);
           
           return {
             name: car.nama_mobil,
