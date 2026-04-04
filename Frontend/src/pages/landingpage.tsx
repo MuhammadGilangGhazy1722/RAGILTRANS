@@ -81,9 +81,9 @@ export default function LandingPage() {
       
       // Fetch cars, reviews, dan stats secara parallel
       const [carsResponse, statsResponse, reviewsResponse] = await Promise.all([
-        fetchAPI(API_ENDPOINTS.CARS),
-        fetchAPI('/api/analytics/landing-stats'),
-        fetchAPI(API_ENDPOINTS.REVIEWS_PUBLIC).catch(() => ({ success: false, data: [] }))
+      fetchAPI(API_ENDPOINTS.CARS),
+      fetchAPI('/api/analytics/landing-stats').catch(() => ({ success: false, data: {} })),
+      fetchAPI(API_ENDPOINTS.REVIEWS_PUBLIC).catch(() => ({ success: false, data: [] }))
       ]);
       
       // Process cars data
