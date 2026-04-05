@@ -31,6 +31,15 @@ const schemas = {
       'string.pattern.base': 'Nomor HP hanya boleh berisi angka (10-15 digit)',
       'any.required': 'Nomor HP wajib diisi'
     })
+    register: Joi.object({
+    nama: Joi.string().pattern(/^[a-zA-Z\s]+$/).required()...,
+    username: ...,
+    email: ...,
+    password: ...,
+    no_hp: ...,
+    confirm_password: Joi.string().required(),  // tambah ini
+    agree_terms: Joi.boolean().required()        // tambah ini
+}),
   }),
 
   login: Joi.object({
@@ -165,7 +174,10 @@ const validate = (schema) => {
   };
 };
 
+
+
 module.exports = {
   schemas,
   validate
 };
+
