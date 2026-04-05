@@ -178,7 +178,7 @@ export default function Login() {
                   type="checkbox"
                   checked={rememberMe()}
                   onChange={(e) => setRememberMe(e.currentTarget.checked)}
-                  class="w-4 h-4 rounded border-gray-700 bg-gray-800 text-purple-600 focus:ring-purple-600 focus:ring-offset-0 focus:ring-2 cursor-pointer"
+                  class="!w-4 !h-4 rounded border-gray-700 bg-gray-800 text-purple-600 focus:ring-purple-600 focus:ring-offset-0 focus:ring-2 cursor-pointer flex-shrink-0"
                 />
                 <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
                   Ingat saya
