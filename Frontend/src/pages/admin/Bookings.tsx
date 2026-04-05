@@ -23,6 +23,9 @@ interface Booking {
   durasi_hari: number;
   total_harga: number;
   catatan?: string;
+  nama_ktp?: string;
+  nik?: string;
+  foto_ktp?: string;
   status: string;
   payment_status?: string;
   midtrans_order_id?: string;
@@ -496,7 +499,36 @@ export default function AdminBookings() {
                         </div>
                       </div>
                     </div>
-
+{/* KTP Section */}
+                    <div class="space-y-3">
+                      <h3 class="text-lg font-semibold text-white border-b border-gray-800 pb-2">Verifikasi KTP</h3>
+                      <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <div class="text-gray-400 text-sm">Nama Sesuai KTP</div>
+                          <div class="text-white font-medium">{booking().nama_ktp || '-'}</div>
+                        </div>
+                        <div>
+                          <div class="text-gray-400 text-sm">NIK</div>
+                          <div class="text-white font-medium">{booking().nik || '-'}</div>
+                        </div>
+                      </div>
+                      <Show when={booking().foto_ktp}>
+                        <div>
+                          <div class="text-gray-400 text-sm mb-2">Foto KTP</div>
+                          <img 
+                            src={booking().foto_ktp} 
+                            alt="Foto KTP" 
+                            class="w-full max-w-md rounded-lg border border-gray-700"
+                          />
+                        </div>
+                      </Show>
+                      <Show when={!booking().foto_ktp}>
+                        <div class="bg-yellow-900/20 border border-yellow-800/30 rounded-lg p-3">
+                          <p class="text-yellow-400 text-sm">⚠️ Foto KTP belum diupload</p>
+                        </div>
+                      </Show>
+                    </div>
+                    
                     {/* Rental Details */}
                     <div class="space-y-3">
                       <h3 class="text-lg font-semibold text-white border-b border-gray-800 pb-2">Detail Sewa</h3>
