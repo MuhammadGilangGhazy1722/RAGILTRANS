@@ -5,7 +5,7 @@ const { auth } = require('../middlewares/auth.middleware');
 const { validate, schemas } = require('../middlewares/validation.middleware');
 
 router.post('/register', validate(schemas.register), register);
-router.post('/login', validate(schemas.login), login);
+router.post('/login',  login);
 router.get('/profile', auth, getProfile);
 router.put('/profile', auth, updateProfile);
 router.post('/change-password', auth, changePassword);
