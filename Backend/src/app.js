@@ -24,6 +24,9 @@ const { errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
 
+// Trust proxy for Railway
+app.set('trust proxy', 1);
+
 // CORS config - support multiple origins from environment variable
 const allowedOrigins = process.env.FRONTEND_URL 
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
