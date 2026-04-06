@@ -58,54 +58,73 @@ exports.updatePaymentStatus = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.getPaymentByBooking = async (req, res, next) => {
-  try {
-    const { bookingId } = req.params;
-    const user_id = req.user.id;
-
-    const { data: row, error } = await supabase.from('pembayaran').select('*, rekening_admin(nama_bank, no_rekening, atas_nama), sewa!inner(user_id)').eq('sewa_id', bookingId).eq('sewa.user_id', user_id).single();
-    if (error || !row) return res.status(404).json({ success: false, message: 'Pembayaran tidak ditemukan' });
-    res.json({ success: true, data: row });
-  } catch (err) { next(err); }
-};
-
 exports.createMidtransTransaction = async (req, res, next) => {
   try {
-    const { booking_id, bank } = req.body;
+    const { booking_id } = req.body;
 
-    const { data: booking, error } = await supabase.from('sewa').select('*, mobil(nama_mobil)').eq('id', booking_id).single();
-    if (error || !booking) return res.status(404).json({ success: false, message: 'Booking tidak ditemukan' });
-    if (booking.status === 'lunas' || booking.payment_status === 'settlement') return res.status(400).json({ success: false, message: 'Booking ini sudah dibayar' });
+    const { data: booking, error } = await supabase
+      .from('sewa')
+      .select('*, mobil(nama_mobil)')
+      .eq('id', booking_id)
+      .single();
+
+    if (error || !booking) 
+      return res.status(404).json({ success: false, message: 'Booking tidak ditemukan' });
+    
+    if (booking.payment_status === 'settlement') 
+      return res.status(400).json({ success: false, message: 'Booking ini sudah dibayar' });
 
     const order_id = `BOOKING-${booking_id}-${Date.now()}`;
-    const bankLower = (bank || 'bca').toLowerCase();
 
     const parameter = {
-      payment_type: 'bank_transfer',
-      transaction_details: { order_id, gross_amount: Math.round(booking.total_harga) },
-      customer_details: { first_name: booking.nama_customer, email: booking.email, phone: booking.no_hp },
-      item_details: [{ id: `mobil-${booking.mobil_id}`, price: Math.round(booking.harga_per_hari), quantity: booking.durasi_hari, name: `Sewa ${booking.mobil?.nama_mobil} (${booking.durasi_hari} hari)` }]
+      transaction_details: {
+        order_id,
+        gross_amount: Math.round(booking.total_harga)
+      },
+      customer_details: {
+        first_name: booking.nama_customer,
+        email: booking.email,
+        phone: booking.no_hp
+      },
+      item_details: [
+        {
+          id: `mobil-${booking.mobil_id}`,
+          price: Math.round(booking.harga_per_hari),
+          quantity: booking.durasi_hari,
+          name: `Sewa ${booking.mobil?.nama_mobil} (${booking.durasi_hari} hari)`
+        }
+      ]
     };
 
-    if (booking.biaya_driver > 0) parameter.item_details.push({ id: 'biaya-driver', price: Math.round(booking.biaya_driver), quantity: 1, name: 'Biaya Driver' });
-
-    if (bankLower === 'mandiri') { parameter.payment_type = 'echannel'; parameter.echannel = { bill_info1: 'Payment for:', bill_info2: `Sewa ${booking.mobil?.nama_mobil}` }; }
-    else { parameter.bank_transfer = { bank: ['bca','bni','bri','cimb'].includes(bankLower) ? bankLower : 'bca' }; }
-
-    if (!process.env.MIDTRANS_SERVER_KEY || !process.env.MIDTRANS_SERVER_KEY.startsWith('SB-')) {
-      const mockVaNumber = `8127${Date.now().toString().slice(-12)}`;
-      await supabase.from('sewa').update({ midtrans_order_id: order_id, midtrans_transaction_id: `TEST-${Date.now()}`, payment_status: 'pending', payment_method: 'bank_transfer', payment_bank: bankLower }).eq('id', booking_id);
-      return res.json({ success: true, message: '⚠️ TESTING MODE: Mock VA created', data: { order_id, va_number: mockVaNumber, bank, gross_amount: Math.round(booking.total_harga), _testing: true } });
+    if (booking.biaya_driver > 0) {
+      parameter.item_details.push({
+        id: 'biaya-driver',
+        price: Math.round(booking.biaya_driver),
+        quantity: 1,
+        name: 'Biaya Driver'
+      });
     }
 
-    const transaction = await core.charge(parameter);
-    let vaNumber = transaction.va_numbers?.[0]?.va_number || null;
-    let billKey = transaction.bill_key || null;
-    let billerCode = transaction.biller_code || null;
+    // Gunakan Snap untuk generate token
+    const snapTransaction = await snap.createTransaction(parameter);
 
-    await supabase.from('sewa').update({ midtrans_order_id: order_id, midtrans_transaction_id: transaction.transaction_id, payment_status: 'pending', payment_method: transaction.payment_type, payment_bank: bankLower }).eq('id', booking_id);
+    // Simpan order_id ke database
+    await supabase.from('sewa').update({
+      midtrans_order_id: order_id,
+      payment_status: 'pending'
+    }).eq('id', booking_id);
 
-    res.json({ success: true, message: 'Transaksi berhasil dibuat', data: { order_id, transaction_id: transaction.transaction_id, transaction_status: transaction.transaction_status, payment_type: transaction.payment_type, va_number: vaNumber, bill_key: billKey, biller_code: billerCode, bank, gross_amount: transaction.gross_amount, transaction_time: transaction.transaction_time, expiry_time: transaction.expiry_time || null } });
+    res.json({
+      success: true,
+      message: 'Snap token berhasil dibuat',
+      data: {
+        snap_token: snapTransaction.token,
+        snap_redirect_url: snapTransaction.redirect_url,
+        order_id,
+        gross_amount: Math.round(booking.total_harga)
+      }
+    });
+
   } catch (err) { next(err); }
 };
 
