@@ -42,19 +42,22 @@ exports.getPaymentById = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.updatePaymentStatus = async (req, res, next) => {
+exports.getPaymentByBooking = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
+    const { bookingId } = req.params;
+    const user_id = req.user.id;
 
-    const { data, error } = await supabase.from('pembayaran').update({ status }).eq('id', id).select().single();
-    if (error || !data) return res.status(404).json({ success: false, message: 'Pembayaran tidak ditemukan' });
+    const { data: row, error } = await supabase
+      .from('pembayaran')
+      .select('*, rekening_admin(nama_bank, no_rekening, atas_nama), sewa!inner(user_id)')
+      .eq('sewa_id', bookingId)
+      .eq('sewa.user_id', user_id)
+      .single();
 
-    if (status === 'approved') {
-      await supabase.from('sewa').update({ status: 'aktif' }).eq('id', data.sewa_id);
-    }
-
-    res.json({ success: true, message: `Pembayaran ${status === 'approved' ? 'disetujui' : 'ditolak'}` });
+    if (error || !row) 
+      return res.status(404).json({ success: false, message: 'Pembayaran tidak ditemukan' });
+    
+    res.json({ success: true, data: row });
   } catch (err) { next(err); }
 };
 
