@@ -61,6 +61,22 @@ exports.getPaymentByBooking = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.updatePaymentStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const { data, error } = await supabase.from('pembayaran').update({ status }).eq('id', id).select().single();
+    if (error || !data) return res.status(404).json({ success: false, message: 'Pembayaran tidak ditemukan' });
+
+    if (status === 'approved') {
+      await supabase.from('sewa').update({ status: 'aktif' }).eq('id', data.sewa_id);
+    }
+
+    res.json({ success: true, message: `Pembayaran ${status === 'approved' ? 'disetujui' : 'ditolak'}` });
+  } catch (err) { next(err); }
+};
+
 exports.createMidtransTransaction = async (req, res, next) => {
   try {
     const { booking_id } = req.body;
