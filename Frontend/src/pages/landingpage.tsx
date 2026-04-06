@@ -316,7 +316,7 @@ export default function LandingPage() {
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div class="animate-float">
             <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent leading-tight">
-              RagilTrans rental
+              RagilTrans Rental
               <br />
               Experience
             </h1>

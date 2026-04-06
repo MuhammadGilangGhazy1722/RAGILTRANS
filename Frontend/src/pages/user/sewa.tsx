@@ -435,84 +435,110 @@
       
       try {
         setIsProcessingPayment(true);
-        showToast('Membuat Virtual Account...', 'info');
+        showToast('Memproses pembayaran...', 'info');
 
-        // Get current booking first (if exists)
-        const existingBooking = paymentInstructions()?.booking_id;
-        let bookingId = existingBooking;
-        let bookingResponse: any = null; // Declare outside if block
-
-        // Jika belum ada booking, buat dulu
-        if (!bookingId) {
-          const car = selectedCar();
-          if (!car) {
-            showToast('Mobil tidak ditemukan', 'error');
-            setIsProcessingPayment(false);
-            return;
-          }
-
-          // Check if user is logged in
-          const userId = localStorage.getItem('userId');
-          
-          const bookingPayload = {
-            ...(userId && { user_id: parseInt(userId) }), // Include user_id if logged in
-            nama_customer: personalData().name,
-            email: personalData().email,
-            no_hp: personalData().phone,
-            nama_ktp: ktpData().nama,
-            nik: ktpData().nik,
-            foto_ktp: ktpData().photo?.name || '',
-            mobil_id: car.id,
-            tanggal_mulai: bookingData().startDate,
-            tanggal_selesai: bookingData().endDate,
-            dengan_driver: bookingData().withDriver === 'yes' ? 'ya' : 'tidak',
-            catatan_sewa: bookingData().notes,
-            catatan_pembayaran: paymentData().catatan
-          };
+        const car = selectedCar();
+        if (!car) {
+          showToast('Mobil tidak ditemukan', 'error');
+          return;
+        }
 
         const token = localStorage.getItem('authToken');
         const endpoint = token 
           ? API_ENDPOINTS.BOOKINGS 
           : `${API_ENDPOINTS.BOOKINGS}/guest`;
-        
-        bookingResponse = await fetchAPI(endpoint, {
+
+        const bookingPayload = {
+          nama_customer: personalData().name,
+          email: personalData().email,
+          no_hp: personalData().phone,
+          nama_ktp: ktpData().nama,
+          nik: ktpData().nik,
+          foto_ktp: ktpData().photo?.name || '',
+          mobil_id: car.id,
+          tanggal_mulai: bookingData().startDate,
+          tanggal_selesai: bookingData().endDate,
+          dengan_driver: bookingData().withDriver === 'yes' ? 'ya' : 'tidak',
+          catatan_sewa: bookingData().notes,
+        };
+
+        const bookingResponse = await fetchAPI(endpoint, {
           method: 'POST',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: JSON.stringify(bookingPayload)
         });
 
-          if (!bookingResponse.success) {
-            throw new Error(bookingResponse.message || 'Gagal membuat booking');
-          }
+        if (!bookingResponse.success) throw new Error(bookingResponse.message || 'Gagal membuat booking');
 
-          bookingId = bookingResponse.data.booking_id;
-          const orderNumber = bookingResponse.data.order_number; // Get order_number from backend
-          showToast('Booking berhasil dibuat!', 'success');
-        }
+        const bookingId = bookingResponse.data.booking_id;
+        showToast('Booking berhasil! Membuka halaman pembayaran...', 'success');
 
-        // Call Midtrans untuk generate VA
+        // Minta Snap token dari backend
         const paymentResponse = await fetchAPI(`${API_ENDPOINTS.PAYMENTS}/midtrans/create`, {
           method: 'POST',
-          body: JSON.stringify({
-            booking_id: bookingId,
-            bank: paymentData().bank_tujuan.toLowerCase()
-          })
+          body: JSON.stringify({ booking_id: bookingId })
         });
 
-        if (paymentResponse.success) {
-          setPaymentInstructions({
-            ...paymentResponse.data,
-            booking_id: bookingId,
-            order_number: bookingResponse?.data?.order_number || null // Save order_number
-          });
-          showToast('Virtual Account berhasil dibuat!', 'success');
-        } else {
-          throw new Error(paymentResponse.message || 'Gagal membuat Virtual Account');
-        }
+        if (!paymentResponse.success) throw new Error(paymentResponse.message || 'Gagal membuat transaksi');
+
+        const { snap_token } = paymentResponse.data;
+
+        // Buka Snap popup Midtrans
+        (window as any).snap.pay(snap_token, {
+          onSuccess: (result: any) => {
+            showToast('Pembayaran berhasil!', 'success');
+            setShowBookingForm(false);
+            setBookingReceipt({
+              bookingId: bookingResponse.data.order_number || `BKG${bookingId}`,
+              orderId: result.order_id,
+              tanggalBooking: new Date().toLocaleDateString('id-ID', {
+                day: '2-digit', month: 'long', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              }),
+              mobil: {
+                nama: car.nama_mobil,
+                plat: car.plat_nomor,
+                transmisi: car.jenis_transmisi,
+                kapasitas: `${car.kapasitas_penumpang} Orang`,
+                hargaPerHari: car.harga_per_hari,
+                image: getCarImage(car.nama_mobil)
+              },
+              customer: {
+                nama: personalData().name,
+                email: personalData().email,
+                phone: personalData().phone,
+                namaKTP: ktpData().nama,
+                nik: ktpData().nik
+              },
+              sewa: {
+                tanggalMulai: bookingData().startDate,
+                tanggalSelesai: bookingData().endDate,
+                durasi: calculateDays(),
+                withDriver: bookingData().withDriver === 'yes',
+                catatan: bookingData().notes
+              },
+              pembayaran: {
+                metodePembayaran: result.payment_type || 'Midtrans',
+                totalHarga: calculateTotalPrice(),
+              }
+            });
+            setShowBookingReceipt(true);
+          },
+          onPending: (_result: any) => {
+            showToast('Menunggu pembayaran, cek email kamu!', 'info');
+            setShowBookingForm(false);
+          },
+          onError: (_result: any) => {
+            showToast('Pembayaran gagal, silakan coba lagi', 'error');
+          },
+          onClose: () => {
+            showToast('Popup pembayaran ditutup', 'warning');
+          }
+        });
 
       } catch (error: any) {
         console.error('Error creating payment:', error);
-        showToast(error.message || 'Gagal membuat pembayaran', 'error');
+        showToast(error.message || 'Gagal memproses pembayaran', 'error');
       } finally {
         setIsProcessingPayment(false);
       }
