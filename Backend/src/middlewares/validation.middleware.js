@@ -72,12 +72,30 @@ const schemas = {
 
   createBooking: Joi.object({
     mobil_id: Joi.number().integer().positive().required(),
-    tanggal_pinjam: Joi.date().iso().required(),
+    
+    // Support kedua nama field (auth booking & guest booking)
+    tanggal_pinjam: Joi.date().iso(),
     tanggal_selesai: Joi.date().iso().required(),
+    tanggal_mulai: Joi.date().iso(),  // alias untuk guest
+    
     dengan_driver: Joi.string().valid('ya', 'tidak').allow('0', '1'),
+    
+    // Guest booking fields
     nama_customer: Joi.string().min(3).max(100),
     email: Joi.string().email(),
-    no_hp: Joi.string().pattern(/^[0-9]{10,15}$/)
+    no_hp: Joi.string().pattern(/^[0-9]{10,15}$/),
+    nama_ktp: Joi.string().min(3).max(100),
+    nik: Joi.string().pattern(/^\d{16}$/),
+    foto_ktp: Joi.string().allow('', null),
+    catatan_sewa: Joi.string().allow('', null),
+    
+    // Auth booking fields
+    jam_pinjam: Joi.string().allow('', null),
+    jam_selesai: Joi.string().allow('', null),
+    jenis_layanan: Joi.string().allow('', null),
+    catatan: Joi.string().allow('', null),
+    nik_ocr: Joi.string().allow('', null),
+    user_id: Joi.number().allow(null),
   })
 };
 
