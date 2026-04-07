@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, onMount } from 'solid-js';
 import { API_ENDPOINTS, fetchAPI } from '../config/api';
 import { showToast } from './ToastContainer';
 
@@ -10,10 +10,24 @@ interface ReviewFormProps {
 
 export default function ReviewForm(props: ReviewFormProps) {
   const [rating, setRating] = createSignal(0);
+  const [hoverRating, setHoverRating] = createSignal(0);
   const [reviewText, setReviewText] = createSignal('');
   const [displayName, setDisplayName] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [submitted, setSubmitted] = createSignal(false);
+
+  // Ambil nama user dari localStorage saat mount
+  onMount(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setDisplayName(user.nama || user.name || user.username || '');
+      }
+    } catch (e) {
+      // tidak ada user login
+    }
+  });
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -30,8 +44,10 @@ export default function ReviewForm(props: ReviewFormProps) {
 
     setLoading(true);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetchAPI(API_ENDPOINTS.SUBMIT_REVIEW, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: JSON.stringify({
           booking_id: props.bookingId,
           rating: rating(),
@@ -57,6 +73,8 @@ export default function ReviewForm(props: ReviewFormProps) {
     }
   };
 
+  const activeRating = () => hoverRating() || rating();
+
   return (
     <div class="space-y-6">
       <Show when={!submitted()} fallback={
@@ -67,21 +85,24 @@ export default function ReviewForm(props: ReviewFormProps) {
         </div>
       }>
         <form onSubmit={handleSubmit} class="space-y-6">
-          {/* Rating */}
+
+          {/* Rating Bintang */}
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-3">
               Berapa rating untuk perjalanan Anda?
             </label>
-            <div class="flex justify-center gap-3">
+            <div class="flex justify-center gap-2">
               {[1, 2, 3, 4, 5].map(star => (
                 <button
                   type="button"
                   onClick={() => setRating(star)}
-                  class={`text-4xl transition-all ${
-                    star <= rating() ? 'text-yellow-400 scale-110' : 'text-gray-600 hover:text-gray-400'
-                  }`}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  class="text-4xl transition-all duration-150 hover:scale-110 focus:outline-none"
                 >
-                  ⭐
+                  <span class={star <= activeRating() ? 'text-yellow-400' : 'text-gray-600'}>
+                    ★
+                  </span>
                 </button>
               ))}
             </div>
@@ -103,23 +124,21 @@ export default function ReviewForm(props: ReviewFormProps) {
               placeholder="Ceritakan pengalaman Anda menyewa mobil kami..."
               class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none min-h-28 resize-none"
             />
-            <div class="flex justify-between items-center mt-2">
-              <p class={`text-xs ${reviewText().trim().length < 10 ? 'text-red-400' : 'text-green-400'}`}>
-                {reviewText().trim().length}/10 minimal
-              </p>
-            </div>
+            <p class={`text-xs mt-1 ${reviewText().trim().length < 10 ? 'text-red-400' : 'text-green-400'}`}>
+              {reviewText().trim().length}/10 minimal
+            </p>
           </div>
 
-          {/* Display Name */}
+          {/* Nama Tampil - otomatis dari user login */}
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
-              Nama Tampil (opsional)
+              Nama Tampil
             </label>
             <input
               type="text"
               value={displayName()}
               onInput={e => setDisplayName(e.currentTarget.value)}
-              placeholder="Biarkan kosong untuk menggunakan nama profil Anda"
+              placeholder="Nama Anda"
               class="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
             />
           </div>
