@@ -292,14 +292,17 @@ export default function Sewa() {
       const endpoint = token ? API_ENDPOINTS.BOOKINGS : `${API_ENDPOINTS.BOOKINGS}/guest`;
 
       const bookingPayload = {
+        nama_customer: personalData().name,
+        email: personalData().email,
+        no_hp: personalData().phone,
         mobil_id: car.id,
-        tanggal_pinjam: bookingData().startDate,
+        tanggal_mulai: bookingData().startDate,
         tanggal_selesai: bookingData().endDate,
         dengan_driver: bookingData().withDriver === 'yes' ? 'ya' : 'tidak',
         nama_ktp: ktpData().nama,
         nik: ktpData().nik,
         foto_ktp: ktpData().photo?.name || '',
-        catatan: bookingData().notes,
+        catatan_sewa: bookingData().notes,
       };
 
       const bookingResponse = await fetchAPI(endpoint, {
