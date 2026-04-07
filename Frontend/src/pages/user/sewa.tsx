@@ -326,7 +326,7 @@ export default function Sewa() {
           setShowBookingForm(false);
           setBookingReceipt({
             bookingId: bookingResponse.data.order_number || `BKG${bookingId}`,
-            orderId: result.order_id,
+            bookingIdAngka: bookingId, 
             tanggalBooking: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
             mobil: {
               nama: car.nama_mobil, plat: car.plat_nomor, transmisi: car.jenis_transmisi,
@@ -855,7 +855,7 @@ export default function Sewa() {
                 </div>
 
                 <div class="flex gap-2">
-                  <button type="button" onClick={() => { setBookingIdForReview(bookingReceipt().bookingId); setShowReviewModal(true); }} class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">⭐ Review</button>
+                  <button type="button" onClick={() => { setBookingIdForReview(bookingReceipt().bookingIdAngka || bookingReceipt().bookingId); setShowReviewModal(true); }} class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">⭐ Review</button>
                   <button type="button" onClick={() => window.print()} class="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all">🖨️ Print</button>
                   <button type="button" onClick={() => { setShowBookingReceipt(false); setBookingReceipt(null); }} class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm font-semibold glow-purple-hover transition-all">Selesai</button>
                 </div>
