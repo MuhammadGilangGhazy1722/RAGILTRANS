@@ -291,8 +291,7 @@ export default function Sewa() {
       const token = localStorage.getItem('authToken');
       const endpoint = token ? API_ENDPOINTS.BOOKINGS : `${API_ENDPOINTS.BOOKINGS}/guest`;
 
-      const bookingPayload = token ? {
-        // User login → createBooking controller (pakai tanggal_pinjam)
+      const bookingPayload = {
         mobil_id: car.id,
         tanggal_pinjam: bookingData().startDate,
         tanggal_selesai: bookingData().endDate,
@@ -301,19 +300,6 @@ export default function Sewa() {
         nik: ktpData().nik,
         foto_ktp: ktpData().photo?.name || '',
         catatan: bookingData().notes,
-      } : {
-        // Guest → createGuestBooking controller (pakai tanggal_mulai)
-        nama_customer: personalData().name,
-        email: personalData().email,
-        no_hp: personalData().phone,
-        nama_ktp: ktpData().nama,
-        nik: ktpData().nik,
-        foto_ktp: ktpData().photo?.name || '',
-        mobil_id: car.id,
-        tanggal_mulai: bookingData().startDate,
-        tanggal_selesai: bookingData().endDate,
-        dengan_driver: bookingData().withDriver === 'yes' ? 'ya' : 'tidak',
-        catatan_sewa: bookingData().notes,
       };
 
       const bookingResponse = await fetchAPI(endpoint, {

@@ -51,8 +51,17 @@ const generateRandomOrderNumber = async () => {
 
 exports.createBooking = async (req, res, next) => {
   try {
+    console.log('=== CREATE BOOKING ===');
+    console.log('REQ BODY:', JSON.stringify(req.body));
+
     const user_id = req.user.id;
-    const { mobil_id, tanggal_pinjam, jam_pinjam, tanggal_selesai, jam_selesai, jenis_layanan, catatan, nama_ktp, nik, nik_ocr, foto_ktp } = req.body;
+    const {
+      mobil_id, tanggal_pinjam, jam_pinjam, tanggal_selesai, jam_selesai,
+      jenis_layanan, catatan, nama_ktp, nik, nik_ocr, foto_ktp
+    } = req.body;
+
+    const dengan_driver = req.body.dengan_driver || 'tidak';
+    const biaya_driver = dengan_driver === 'ya' ? 50000 : 0;
 
     const { data: mobil, error: mobilError } = await supabase.from('mobil').select('harga_per_hari, stok').eq('id', mobil_id).single();
     if (mobilError || !mobil) return res.status(404).json({ success: false, message: 'Mobil tidak ditemukan' });
@@ -61,7 +70,7 @@ exports.createBooking = async (req, res, next) => {
     if (!isAvailable) return res.status(400).json({ success: false, message: 'Mobil tidak tersedia untuk tanggal yang dipilih.' });
 
     const durasi_hari = Math.ceil((new Date(tanggal_selesai) - new Date(tanggal_pinjam)) / (1000 * 60 * 60 * 24)) || 1;
-    const total_harga = mobil.harga_per_hari * durasi_hari;
+    const total_harga = (mobil.harga_per_hari * durasi_hari) + biaya_driver;
 
     await supabase.from('verifikasi_ktp').upsert([{ user_id, nik_input: nik, nik_ocr, foto_ktp, status: 'pending' }], { onConflict: 'user_id' });
 
@@ -70,13 +79,18 @@ exports.createBooking = async (req, res, next) => {
     const { data: result, error } = await supabase.from('sewa').insert([{
       user_id, mobil_id, tanggal_pinjam, jam_pinjam, tanggal_selesai, jam_selesai,
       jenis_layanan, harga_per_hari: mobil.harga_per_hari, durasi_hari, total_harga,
+      dengan_driver, biaya_driver,
       catatan, order_number, status: 'menunggu_pembayaran'
     }]).select().single();
     if (error) throw error;
 
     await supabase.from('mobil').update({ stok: mobil.stok - 1 }).eq('id', mobil_id);
 
-    res.status(201).json({ success: true, message: 'Booking berhasil, silakan lakukan pembayaran', data: { booking_id: result.id, order_number, durasi_hari, total_harga, status: 'menunggu_pembayaran' } });
+    res.status(201).json({
+      success: true,
+      message: 'Booking berhasil, silakan lakukan pembayaran',
+      data: { booking_id: result.id, order_number, durasi_hari, total_harga, status: 'menunggu_pembayaran' }
+    });
   } catch (err) { next(err); }
 };
 
@@ -209,7 +223,11 @@ exports.createGuestBooking = async (req, res, next) => {
     }]).select().single();
     if (error) throw error;
 
-    res.status(201).json({ success: true, message: 'Booking berhasil dibuat, silakan lanjutkan pembayaran', data: { booking_id: result.id, order_number, nama_mobil: mobil.nama_mobil, durasi_hari, biaya_driver, total_harga, status: 'menunggu_pembayaran' } });
+    res.status(201).json({
+      success: true,
+      message: 'Booking berhasil dibuat, silakan lanjutkan pembayaran',
+      data: { booking_id: result.id, order_number, nama_mobil: mobil.nama_mobil, durasi_hari, biaya_driver, total_harga, status: 'menunggu_pembayaran' }
+    });
   } catch (err) { next(err); }
 };
 
