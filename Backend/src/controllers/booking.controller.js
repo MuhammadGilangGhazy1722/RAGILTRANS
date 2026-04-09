@@ -55,10 +55,11 @@ exports.createBooking = async (req, res, next) => {
     console.log('REQ BODY:', JSON.stringify(req.body));
 
     const user_id = req.user.id;
-    const {
-      mobil_id, tanggal_pinjam, jam_pinjam, tanggal_selesai, jam_selesai,
-      jenis_layanan, catatan, nama_ktp, nik, nik_ocr, foto_ktp
-    } = req.body;
+  const {
+        mobil_id, tanggal_pinjam, jam_pinjam, tanggal_selesai, jam_selesai,
+        jenis_layanan, catatan, nama_ktp, nik, nik_ocr, foto_ktp,
+        nama_customer, email, no_hp
+      } = req.body;
 
     const dengan_driver = req.body.dengan_driver || 'tidak';
     const biaya_driver = dengan_driver === 'ya' ? 50000 : 0;
@@ -79,7 +80,8 @@ exports.createBooking = async (req, res, next) => {
     const { data: result, error } = await supabase.from('sewa').insert([{
       user_id, mobil_id, tanggal_pinjam, jam_pinjam, tanggal_selesai, jam_selesai,
       jenis_layanan, harga_per_hari: mobil.harga_per_hari, durasi_hari, total_harga,
-      dengan_driver, biaya_driver,
+      dengan_driver, biaya_driver, nama_ktp, nik, foto_ktp,
+      nama_customer, email, no_hp,
       catatan, order_number, status: 'menunggu_pembayaran'
     }]).select().single();
     if (error) throw error;

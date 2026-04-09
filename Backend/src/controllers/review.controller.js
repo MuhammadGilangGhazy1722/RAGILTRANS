@@ -115,7 +115,7 @@ exports.getAllReviews = async (req, res) => {
       .limit(50);
 
     if (error) throw error;
-
+ 
     // Map display_name fallback
     const mappedReviews = reviews.map(review => ({
       ...review,
