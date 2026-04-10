@@ -66,7 +66,7 @@ const schemas = {
     nama_mobil: Joi.string().required(),
     plat_nomor: Joi.string().pattern(/^[A-Z]{1,2}\s?\d{1,4}\s?[A-Z]{1,3}$/).required(),
     kapasitas_penumpang: Joi.number().integer().min(2).max(20).required(),
-    jenis_transmisi: Joi.string().valid('Manual', 'Otomatis').required(),
+    jenis_transmisi: Joi.string().valid('Manual', 'Otomatis', 'manual', 'otomatis').required(),
     harga_per_hari: Joi.number().positive().required()
   }),
 
